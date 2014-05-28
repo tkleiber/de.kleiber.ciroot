@@ -1,0 +1,100 @@
+<project name="properties">
+    <property environment="env"/>
+    <property name="sources.home.location" location="../../summit"/>
+    <condition property="sources.home" value="${env.jenkins.sources.home}" else="${sources.home.location}">
+        <isset property="env.jenkins.sources.home"/>
+    </condition>
+    <property name="libs.home" location="lib"/>
+    <property name="output.dir" value="classes"/>
+    <!-- Umgebungsspezifische Konfiguration -->
+    <condition property="oracle.middleware.dir" description="Verzeichnis der Oracle Middleware Installation"
+               value="${env.HOME}" else="C:\Oracle\JDev121200">
+        <isset property="env.HOME"/>
+    </condition>
+    <!-- Oracle Middleware Konfiguration -->
+    <condition property="jdeveloper.home" description="Verzeichnis der Oracle Middleware Installation"
+               value="${env.JDEV_HOME}" else="${oracle.middleware.dir}">
+        <isset property="env.JDEV_HOME"/>
+    </condition>
+    <property name="oracle.jdeveloper.ant.library"
+              location="${jdeveloper.home}/jdeveloper/jdev/lib/ant-jdeveloper.jar"/>
+    <condition property="oracle.ojdeploy.executable" value="ojdeploy.exe" else="ojdeploy">
+        <os family="windows"/>
+    </condition>
+    <property name="oracle.jdeveloper.ojdeploy.path"
+              location="${jdeveloper.home}/jdeveloper/jdev/bin/${oracle.ojdeploy.executable}"/>
+    <condition property="oracle.ojserver.executable" value="ojserver.exe" else="ojserver">
+        <os family="windows"/>
+    </condition>
+    <condition property="oracle.wlst.executable" value="wlst.cmd" else="wlst.sh">
+        <os family="windows"/>
+    </condition>
+    <property name="oracle.jdeveloper.wlst.path"
+              location="${oracle.middleware.dir}/oracle_common/common/bin/${oracle.wlst.executable}"/>
+    <property name="oracle.jdeveloper.wls.dir" location="${oracle.middleware.dir}/wlserver"/>
+    <property name="oracle.jdeveloper.ojserver.path"
+              location="${jdeveloper.home}/jdeveloper/jdev/bin/${oracle.ojserver.executable}"/>
+    <!-- Oracle WebLogic Konfiguration -->
+    <condition property="oracle.wls.admin_url" description="Admin-URL für das Deployment von Java-Anwendungen"
+               value="${env.WL_ADMIN_URL}" else="t3://localhost:7101">
+        <isset property="env.WL_ADMIN_URL"/>
+    </condition>
+    <condition property="oracle.wls.user" description="Weblogic User" value="${env.WL_USERNAME}" else="weblogic">
+        <isset property="env.WL_USERNAME"/>
+    </condition>
+    <condition property="oracle.wls.password" description="Weblogic Password" value="${env.WL_PASSWORD}"
+               else="weblogic1">
+        <isset property="env.WL_PASSWORD"/>
+    </condition>
+    <condition property="oracle.wls.target" description="Weblogic Managed Server" value="${env.WL_DEPLOY_SERVER}"
+               else="DefaultServer">
+        <isset property="env.WL_DEPLOY_SERVER"/>
+    </condition>
+    <!-- Jenkins-Spezifische Konfiguration -->
+    <condition property="external.checkstyle.minimum.priority" value="${env.jenkins.checkstyle.minimum.priority}">
+        <isset property="env.jenkins.checkstyle.minimum.priority"/>
+    </condition>
+    <condition property="external.findbugs.minimum.priority" value="${env.jenkins.findbugs.minimum.priority}">
+        <isset property="env.jenkins.findbugs.minimum.priority"/>
+    </condition>
+    <condition property="external.pmd.minimum.priority" value="${env.jenkins.pmd.minimum.priority}">
+        <isset property="env.jenkins.pmd.minimum.priority"/>
+    </condition>
+    <condition property="external.findbugs.output.format" value="${env.jenkins.findbugs.output.format}">
+        <isset property="env.jenkins.findbugs.output.format"/>
+    </condition>
+    <tstamp>
+        <format property="build.number.major" pattern="yyyyMMdd"/>
+        <format property="build.number.minor" pattern="HHmmss"/>
+    </tstamp>
+    <property name="build.number" value="${build.number.major}.${build.number.minor}"/>
+    <!-- Path für den Oracle WebLogic -->
+    <path id="oracle.wldeploy.path">
+        <fileset file="${oracle.jdeveloper.wls.dir}/server/lib/weblogic.jar"/>
+        <fileset file="${oracle.jdeveloper.wls.dir}/server/lib/webservices.jar"/>
+    </path>
+    <!-- task definitions -->
+    <taskdef description="ant-contrib" resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement location="${libs.home}/ant-contrib/ant-contrib-1.0b3.jar"/>
+        </classpath>
+    </taskdef>
+    <taskdef name="ojdeploy" classname="oracle.jdeveloper.deploy.ant.OJDeployAntTask" uri="oraclelib:OJDeployAntTask"
+             classpath="${oracle.jdeveloper.ant.library}"
+             description='Taskdefinition für den "headless JDeveloper" für den Build'/>
+    <taskdef name="wldeploy" classname="weblogic.ant.taskdefs.management.WLDeploy"
+             description="Taskdefinition für Deployment zum Weblogic Server">
+        <classpath refid="oracle.wldeploy.path"/>
+    </taskdef>
+</project>
+
+
+
+
+
+
+
+
+
+
+

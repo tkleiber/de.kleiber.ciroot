@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project default="configure">
+  <import file="properties.xml" description="Import zentraler Eigenschaften"/>
+  <property file="${oracle.home}/jdev/bin/version.properties" description="JDeveloper Versionsinformationen"/>
+  <property environment="env" description="Betriebssystemvariablen"/>
+  <target name="init">
+    <condition property="jdev.system.dir" description="Oracle JDeveloper Systemverzeichnis für Präferenzen"
+               value="${env.JDEV_USER_DIR}${file.separator}system${VER_FULL}"
+               else="${user.home}${file.separator}AppData${file.separator}Roaming${file.separator}JDeveloper${file.separator}system${VER_FULL}">
+      <isset property="env.JDEV_USER_DIR"/>
+    </condition>
+  </target>
+    <target name="configure"
+            description="Konfigurationen für den IntegratedWebLogicServer (Kein ANT WLST Task wegen erforderlicher WLST Version)">
+        <property name="wlst.skript"
+                  location="wlst/IntegratedWebLogicServerSettings.py"/>
+        <exec executable="${oracle.jdeveloper.wlst.path}" spawn="false"
+              failonerror="true">
+            <arg value="${wlst.skript}"/>
+        </exec>
+    </target>
+</project>

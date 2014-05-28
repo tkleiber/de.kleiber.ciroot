@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<ruleset name="Oracle ADF rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+      <description>This ruleset checks Oracle ADF code for bad stuff</description>
+      <!-- Taskflow opions -->
+      <rule name="OracleAdfTaskflowShouldNotHaveIsolatedDataControl" since="5.0"
+            language="xml"
+            message="ADF tasklows should normally contain shared datacontrols"
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value>
+                              <![CDATA[
+                        adfc-config/task-flow-definition/data-control-scope/isolated
+                        ]]>
+                        </value>
+                  </property>
+            </properties>
+      </rule>
+      <rule name="OracleAdfTaskflowShouldNotHaveNoControllerTransaktion" since="5.0" language="xml"
+            message='ADF tasklows should normally not contain transaktion behavior "No Controller Transaction"'
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value><![CDATA[
+                        adfc-config/task-flow-definition[not(transaction)]
+                        ]]></value>
+                  </property>
+            </properties>
+      </rule>
+      <rule name="OracleAdfLibShouldContainNoConnectionDetails" since="5.0"
+            language="xml"
+            message="ADF Library deployment profile should only contain connection name"
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value>
+                              <![CDATA[
+                        //value[@n="adflib-connectionDetails" and @v="true"]
+                        ]]>
+                        </value>
+                  </property>
+            </properties>
+      </rule>
+      <!-- Naming Conventions -->
+</ruleset>

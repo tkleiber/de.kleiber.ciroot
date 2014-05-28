@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<ruleset name="Oracle ADF rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+      <description>This ruleset checks Oracle ADF code for bad stuff</description>
+      <!--rule name="OracleAdfAmJdbcDatasourceName" since="5.0" language="xml"
+            message="ADF application module JDBC Datasources should be named java:comp/env/jdbc/ikb_ikbadfDS"
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value><![CDATA[
+                        adfc-config/task-flow-definition[not(/adfc-config/task-flow-definition/transaction)]
+                        ]]></value>
+                  </property>
+            </properties>
+      </rule-->
+      <!--rule name="OracleAdfModelAssociationNameShouldEndWithAssoc" since="5.0"
+            language="xml"
+            message="ADF model association name should end with Assoc">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value><![CDATA[
+                        Association/not(ends-with(@Name,'Assoc'))
+                        ]]></value>
+                  </property>
+            </properties>
+      </rule-->
+</ruleset>

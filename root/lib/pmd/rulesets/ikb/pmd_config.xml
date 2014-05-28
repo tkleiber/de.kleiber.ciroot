@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<ruleset name="Oracle ADF rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+      <description>This ruleset checks Oracle ADF code for bad stuff</description>
+      <!-- ADF Rules ############################################################################################### -->
+      <rule name="OracleAdfAmJdbcDatasourceName" since="5.0" language="xml"
+            message="ADF application module JDBC Datasources should be named java:comp/env/jdbc/ikb_ikbadfDS"
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value>
+                              <![CDATA[
+                        /BC4JConfig/AppModuleConfigBag/AppModuleConfig/Custom[@JDBCDataSource!="java:comp/env/jdbc/ikb_ikbadfDS"]
+                        ]]>
+                        </value>
+                  </property>
+            </properties>
+      </rule>
+      <rule name="OracleAdfJwsShouldDeployToWeblogicJdbcXml" since="5.0"
+            language="xml"
+            message='ADF application should not have the property "Auto Generate and Synchronize weblogic-jdbc.xml Descriptors During Deployment" set'
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value>
+                              <![CDATA[
+                        //value[@n="Weblogic-JDBC-Auto-Sync-Key" and @v="true"]
+                        ]]>
+                        </value>
+                  </property>
+            </properties>
+      </rule>
+      <rule name="OracleAdfAmShouldNotBaseOnJdbcUrl" since="5.0" language="xml"
+            message="ADF application module configurations should based on JDBC Datasources, not on JDBC URLs, except JUnittest Config."
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value>
+                              <![CDATA[
+                        /BC4JConfig/AppModuleConfigBag/AppModuleConfig[@JDBCName and @name!='JUnittest']
+                        ]]>
+                        </value>
+                  </property>
+            </properties>
+      </rule>
+      <rule name="OracleAdfAmShouldHaveOptimisticLocking" since="5.0"
+            language="xml"
+            message="ADF application module configurations should contain optimistic locking"
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value>
+                              <![CDATA[
+                        /BC4JConfig/AppModuleConfigBag/AppModuleConfig/Database[@jbo.locking.mode!="optimistic"]
+                        ]]>
+                        </value>
+                  </property>
+            </properties>
+      </rule>
+      <rule name="OracleAdfLibShouldContainNoConnectionDetails" since="5.0"
+            language="xml"
+            message="ADF Library deployment profile should only contain connection name"
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value>
+                              <![CDATA[
+                        //value[@n="adflib-connectionDetails" and @v="true"]
+                        ]]>
+                        </value>
+                  </property>
+            </properties>
+      </rule>
+      <rule name="OracleAdfLibDeployShouldStopOnValidationErrors" since="5.0"
+            language="xml"
+            message="ADF Library deployment should stop on Validation Errors"
+            class="net.sourceforge.pmd.lang.rule.XPathRule">
+            <priority>1</priority>
+            <properties>
+                  <property name="xpath">
+                        <value>
+                              <![CDATA[
+                        //value[@n="adflib-nonReusablesError" and @v="false"]
+                        ]]>
+                        </value>
+                  </property>
+            </properties>
+      </rule>
+</ruleset>

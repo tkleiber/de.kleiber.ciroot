@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project xmlns="antlib:org.apache.tools.ant" name="check" default="all" basedir=".">
+    <import file="properties.xml"/>
+    <!-- checkstyle -->
+    <property name="checkstyle.home" value="${libs.home}/checkstyle"/>
+    <path id="checkstyle.classpath">
+        <fileset dir="${checkstyle.home}/lib" includes="**/**-all.jar"/>
+    </path>
+    <pathconvert property="checkstyle.classpath.path" refid="checkstyle.classpath" pathsep=","/>
+    <taskdef description="checkstyle" resource="checkstyletask.properties" classpathref="checkstyle.classpath"/>
+    <!-- pmd -->
+    <property name="pmd.home" value="${libs.home}/pmd"/>
+    <path id="pmd.classpath">
+        <fileset dir="${pmd.home}/lib" includes="**/**.jar"/>
+    </path>
+    <taskdef name="pmd" classpathref="pmd.classpath" classname="net.sourceforge.pmd.ant.PMDTask"/>
+    <!-- inits -->
+    <if>
+        <isset property="external.tool.sources.dir"/>
+        <then>
+            <property name="sources.dir" value="${external.tool.sources.dir}"/>
+        </then>
+        <else>
+            <property name="sources.dir" value="${sources.home}"/>
+        </else>
+    </if>
+    <!-- sources fileset -->
+    <fileset dir="${sources.dir}" id="check.fileset.id">
+        <include name="**/*.java"/>
+        <include name="**/*.jpr"/>
+        <include name="**/*.jws"/>
+        <include name="**/*.xcfg"/>
+        <include name="**/*.xml"/>
+        <exclude name="**/${output.dir}/**"/>
+        <exclude name="**/deploy/**"/>
+        <exclude name="**/results/**"/>
+    </fileset>
+    <target name="checkstyle_all" description="Ausführung aller Checkstyle-Regeln">
+        <delete dir="${sources.dir}/results/checkstyle"/>
+        <if>
+            <isset property="external.checkstyle.minimum.priority"/>
+            <then>
+                <property name="checkstyle.minimum.priority" value="${external.checkstyle.minimum.priority}"/>
+            </then>
+            <else>
+                <input message="Ausgabe aller Checkstyle Regeln mit minimaler Priorität"
+                       addproperty="checkstyle.minimum.priority" defaultvalue="info" validargs="info,warning,error"/>
+            </else>
+        </if>
+        <mkdir dir="${sources.dir}/results/checkstyle"/>
+        <delete file="${sources.dir}/results/checkstyle/checkstyle_all.html"/>
+        <if>
+            <and>
+                <isset property="external.tool.sources.dir"/>
+                <isset property="external.tool.sources.file"/>
+                <contains string="${external.tool.sources.file}" substring=".java" casesensitive="false"/>
+            </and>
+            <then>
+                <echo message="PMD is running on file ${external.tool.sources.dir}${file.separator}${external.tool.sources.file}"
+                      level="info"></echo>
+                <checkstyle config="${checkstyle.home}/rulesets/sun_checks.xml" failonviolation="false">
+                    <fileset dir="${sources.dir}" includes="${external.tool.sources.file}"/>
+                    <formatter type="plain"/>
+                    <formatter type="xml" tofile="${sources.dir}/results/checkstyle/checkstyle_all.xml"/>
+                </checkstyle>
+            </then>
+            <else>
+                <echo message="PMD is running on directory ${sources.dir}" level="info"></echo>
+                <checkstyle config="${checkstyle.home}/rulesets/sun_checks.xml" failonviolation="false">
+                    <fileset dir="${sources.dir}" includes="**/*.java"/>
+                    <formatter type="plain"/>
+                    <formatter type="xml" tofile="${sources.dir}/results/checkstyle/checkstyle_all.xml"/>
+                </checkstyle>
+            </else>
+        </if>
+    </target>
+    <target name="findbugs_all" description="Ausführung aller Findbugs-Regeln">
+        <!-- TODO Compile before -->
+        <delete dir="${sources.dir}/results/findbugs"/>
+        <if>
+            <isset property="external.findbugs.minimum.priority"/>
+            <then>
+                <property name="findbugs.minimum.priority" value="${external.findbugs.minimum.priority}"/>
+            </then>
+            <else>
+                <input message="Ausgabe aller Findbugs Regeln mit minimaler Priorität"
+                       addproperty="findbugs.minimum.priority" defaultvalue="low" validargs="low,medium,high"/>
+            </else>
+        </if>
+        <if>
+            <equals arg1="${external.tool.sources.file.extension}" arg2=".jws"/>
+            <then>
+                <property name="findbugs.includes" value="*"/>
+            </then>
+            <elseif>
+                <not>
+                    <isset property="external.tool.sources.file.extension"/>
+                </not>
+            <then>
+                <property name="findbugs.includes" value="*/*"/>
+            </then>
+            </elseif>
+            <else>
+                <property name="findbugs.includes" value="${external.tool.project.dirname}"/>
+            </else>
+        </if>
+        <if>
+            <isset property="external.tool.workspace.dir"/>
+            <then>
+                <property name="sources.dir.findbugs" value="${external.tool.workspace.dir}"/>
+            </then>
+            <else>
+                <property name="sources.dir.findbugs" value="${sources.home}"/>
+            </else>
+        </if>
+        <subant target="sub.findbugs" genericantfile="check_sub.xml" inheritall="true">
+            <dirset dir="${sources.dir.findbugs}" includes="${findbugs.includes}"
+                    excludes="**/.svn,**/.adf,**/src,**/.data,**/deploy,**/results,results/**"/>
+        </subant>
+    </target>
+    <target name="pmd_all" description="Ausführung aller PMD-Regeln">
+        <delete dir="${sources.dir}/results/pmd"/>
+        <if>
+            <isset property="external.pmd.minimum.priority"/>
+            <then>
+                <property name="pmd.minimum.priority" value="${external.pmd.minimum.priority}"/>
+            </then>
+            <else>
+                <input message="Ausgabe aller PMD Regeln mit minimaler Priorität" addproperty="pmd.minimum.priority"
+                       defaultvalue="5" validargs="5,4,3,2,1"/>
+            </else>
+        </if>
+        <mkdir dir="${sources.dir}/results/pmd"/>
+        <delete file="${sources.dir}/results/pmd/pmd_all.xml"/>
+        <fileset dir="${pmd.home}/rulesets" id="pmd.rulesets.id">
+            <filename name="**/*.xml"/>
+            <exclude name="**/internal/**"/>
+            <exclude name="**/releases/**"/>
+            <exclude name="**/ikb/**"/>
+        </fileset>
+        <pathconvert property="pmd.rulesets" refid="pmd.rulesets.id" pathsep=","/>
+        <if>
+            <and>
+                <isset property="external.tool.sources.dir"/>
+                <isset property="external.tool.sources.file"/>
+                <or>
+                    <contains string="${external.tool.sources.file}" substring=".java" casesensitive="false"/>
+                    <contains string="${external.tool.sources.file}" substring=".xcfg" casesensitive="false"/>
+                    <contains string="${external.tool.sources.file}" substring=".xml" casesensitive="false"/>
+                </or>
+            </and>
+            <then>
+                <echo message="PMD is running on file ${external.tool.sources.dir}${file.separator}${external.tool.sources.file}"
+                      level="info"></echo>
+                <pmd rulesetfiles="${pmd.home}/rulesets/ikb/pmd_config.xml,${pmd.rulesets}"
+                     minimumpriority="${pmd.minimum.priority}">
+                    <formatter type="text" toconsole="true"/>
+                    <fileset dir="${external.tool.sources.dir}">
+                        <include name="${external.tool.sources.file}"/>
+                    </fileset>
+                </pmd>
+            </then>
+            <else>
+                <echo message="PMD is running on directory ${sources.dir}" level="info"></echo>
+                <pmd rulesetfiles="${pmd.home}/rulesets/ikb/pmd_config.xml,${pmd.rulesets}"
+                     minimumpriority="${pmd.minimum.priority}">
+                    <formatter type="text" toconsole="true"/>
+                    <formatter type="xml" tofile="${sources.dir}/results/pmd/pmd_all.xml" toconsole="true"/>
+                    <fileset refid="check.fileset.id"/>
+                </pmd>
+            </else>
+        </if>
+    </target>
+    <target name="pmd_prio1">
+        <echo message="PMD is running on directory ${sources.dir}" level="info"></echo>
+        <delete dir="${sources.dir}/results/pmd"/>
+        <mkdir dir="${sources.dir}/results/pmd"/>
+        <delete file="${sources.dir}/results/pmd/pmd_prio1.xml"/>
+        <pmd rulesetfiles="${pmd.home}/rulesets/ikb/pmd_config.xml" failonruleviolation="true" minimumpriority="1">
+            <formatter type="xml" tofile="${sources.dir}/results/pmd/pmd_prio1.xml"/>
+            <formatter type="text" toconsole="true"/>
+            <fileset refid="check.fileset.id"/>
+        </pmd>
+    </target>
+    <target name="all">
+        <antcall target="pmd_all" description="Ausführung aller PMD Regeln"></antcall>
+        <antcall target="checkstyle_all" description="Ausführung aller Checkstyle Regeln"></antcall>
+        <antcall target="findbugs_all" description="Ausführung aller Checkstyle Regeln"></antcall>
+    </target>
+</project>
+

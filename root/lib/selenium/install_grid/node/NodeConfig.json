@@ -1,0 +1,34 @@
+{
+  "capabilities":
+      [
+        {
+          "browserName": "firefox",
+          "version": "###FIREFOX_TEST_PROFILE###",
+          "platform": "WINDOWS",
+          "maxInstances": ###FIREFOX_MAX_INSTANCES###
+        },
+        {
+          "browserName": "internet explorer",
+          "version": "###INTERNET_EXPLORER_TEST_PROFILE###",
+          "platform": "WINDOWS",
+          "maxInstances": ###INTERNET_EXPLORER_MAX_INSTANCES###
+        }
+      ],
+    "configuration":
+        {
+        "nodeTimeout":120,
+        "port":5555,
+
+        "hubPort":4444,
+        "hubHost":"localhost",
+
+        "nodePolling":20000,
+
+        "registerCycle":10000,
+        "register":true,
+        "cleanUpCycle":2000,
+        "timeout":300000,
+        "maxSession":###MAX_SESSIONS###,
+        }
+}
+ 

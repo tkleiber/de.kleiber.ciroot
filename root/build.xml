@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="Masterbuild fuer alle ADF Anwendungen" default="all" basedir=".">
+    <import file="properties.xml" description="Import zentraler Eigenschaften"/>
+    <available file="${oracle.jdeveloper.ojserver.path}" property="oracle.ojserver.found"
+               description="Prüfen, ob ojserver existiert"/>
+    <!-- Gemeinsame Targets ========================================================================================== -->
+    <target name="ojserver_start" if="oracle.ojserver.found">
+        <exec executable="${oracle.jdeveloper.ojserver.path}" resultproperty="oracle.ojserver.ping.result.start">
+            <arg value="-ping"/>
+        </exec>
+        <if>
+            <equals arg1="${oracle.ojserver.ping.result.start}" arg2="0"/>
+            <then>
+                <echo message="ojserver ist bereits gestartet"></echo>
+            </then>
+            <else>
+                <echo message="ojserver wird gestartet"></echo>
+                <if>
+                    <os family="windows"/>
+                    <then>
+                        <exec executable="cmd.exe">
+                            <arg line="/c start ${oracle.jdeveloper.ojserver.path} -start"/>
+                        </exec>
+                    </then>
+                    <else>
+                        <exec executable="${oracle.jdeveloper.ojserver.path}" spawn="true">
+                            <arg line="-start"/>
+                        </exec>
+                    </else>
+                </if>
+                <waitfor maxwait="3" maxwaitunit="minute" checkevery="500">
+                    <socket server="localhost" port="2010"/>
+                </waitfor>
+            </else>
+        </if>
+    </target>
+    <target name="ojserver_stop" if="oracle.ojserver.found">
+        <exec executable="${oracle.jdeveloper.ojserver.path}" resultproperty="oracle.ojserver.ping.result.stop">
+            <arg value="-ping"/>
+        </exec>
+        <if>
+            <equals arg1="${oracle.ojserver.ping.result.stop}" arg2="0"/>
+            <then>
+                <echo message="ojserver wird gestoppt"></echo>
+                <exec executable="${oracle.jdeveloper.ojserver.path}">
+                    <arg line="-stop"/>
+                </exec>
+            </then>
+            <else>
+                <echo message="ojserver ist bereits gestoppt"></echo>
+            </else>
+        </if>
+    </target>
+    <!-- Web Applications ============================================================================================ -->
+    <target name="clean_web_applications" description="Leeren von Buildverzeichnisssen">
+        <subant target="sub_clean_web_applications" genericantfile="build_sub.xml" inheritall="true">
+            <dirset dir="${sources.home}" includes="*" excludes="results"/>
+        </subant>
+    </target>
+    <target name="build_web_applications" description="Bauen der Web-Applikationen" depends="clean_web_applications">
+        <subant target="sub_build_web_applications" genericantfile="build_sub.xml" inheritall="true">
+            <dirset dir="${sources.home}" includes="*" excludes="results"/>
+        </subant>
+    </target>
+    <target name="undeploy_web_applications" description="Entfernen der Web-Applikationen vom Oracle Weblogic Server">
+        <subant target="sub_undeploy_web_applications" genericantfile="build_sub.xml" inheritall="true">
+            <dirset dir="${sources.home}" includes="*" excludes="results"/>
+        </subant>
+    </target>
+    <target name="deploy_web_applications"
+            description="Deployment der Web-Applikationen auf dem Oracle WebLogic Server">
+        <subant target="sub_deploy_web_applications" genericantfile="build_sub.xml" inheritall="true">
+            <dirset dir="${sources.home}" includes="*" excludes="results"/>
+        </subant>
+    </target>
+    <!-- Gruppierte Builds =========================================================================================== -->
+    <target name="build_all" depends="build_web_applications" description="Bauen aller Artefakte"></target>
+    <target name="clean_all" depends="clean_web_applications" description="Leeren aller Deployment-Verzeichnisse"></target>
+    <target name="undeploy_all" depends="undeploy_web_applications"
+            description="Entfernen aller Artefakte vom den Oracle WebLogic Server"></target>
+    <target name="deploy_all" depends="deploy_web_applications"
+            description="Deployment aller Artefakte auf den Oracle WebLogic Server"></target>
+    <target name="all" depends="clean_all,build_all,undeploy_all,deploy_all"
+            description="kompletter Ablauf aller vorherigen Schritte"></target>
+</project>

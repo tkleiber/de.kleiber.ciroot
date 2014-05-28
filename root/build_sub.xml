@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project xmlns="antlib:org.apache.tools.ant" default="deploy" basedir="." name="Sub-Targets fuer alle ADF Anwendungen">
+    <!-- Web Applications ========================================================================================== -->
+    <target name="sub_init_web_applications" description="Initialisierung für Web-Applikationen">
+        <echo message="basedir: ${basedir}" level="info"></echo>
+        <property name="application.dir" location="."/>
+        <path id="oracle.ojdeploy.workspace.id">
+            <fileset dir="${application.dir}">
+                <include name="*.jws"/>
+            </fileset>
+        </path>
+        <property name="oracle.ojdeploy.workspace" refid="oracle.ojdeploy.workspace.id"/>
+        <basename property="application.name" file="${oracle.ojdeploy.workspace}" suffix=".jws"/>
+        <property name="oracle.ojdeploy.output.dir" location="${application.dir}/deploy"/>
+        <property name="oracle.ojdeploy.output.file" location="${oracle.ojdeploy.output.dir}/${application.name}.ear"/>
+        <property name="oracle.ojdeploy.profile" value="*"/>
+        <property name="oracle.ojdeploy.log.dir" location="${application.dir}/deploy"/>
+        <property name="oracle.ojdeploy.log.buildscript"
+                  value="${oracle.ojdeploy.log.dir}/ojdeploy-build-${oracle.ojdeploy.profile}.xml"/>
+        <property name="oracle.ojdeploy.log.statuslog"
+                  value="${oracle.ojdeploy.log.dir}/ojdeploy-statuslog-${oracle.ojdeploy.profile}.xml"/>
+        <property name="oracle.wldeploy.library" value="false"/>
+        <property name="oracle.wldeploy.plan" value="true"/>
+        <available file="${oracle.ojdeploy.output.file}" property="oracle.ojdeploy.output.file.found"
+                   description="Merken, ob ein Buildartefakt erzeugt wurde (evt. gab es kein solches Deploymentprofile und damit kein Artefakt)"/>
+    </target>
+    <target name="sub_clean_web_applications" description="Löschen von Build-Verzeichnissen"
+            depends="sub_init_web_applications">
+        <delete dir="${basedir}/deploy"/>
+    </target>
+    <target name="sub_build_web_applications" description="Bauen der Web-Applikationen"
+            depends="sub_init_web_applications">
+        <echo message="========= Bauen der Web Applications mit OJDeploy: ${application.name} =="></echo>
+        <ora:ojdeploy xmlns:ora="oraclelib:OJDeployAntTask" executable="${oracle.jdeveloper.ojdeploy.path}"
+                      failonerror="true" ora:buildscript="${oracle.ojdeploy.log.dir}/ojdeploy-build.xml"
+                      ora:statuslog="${oracle.ojdeploy.log.dir}/ojdeploy-statuslog.xml">
+            <!-- TODO Workarounds für nicht per ant task verfügbare ojdeploy Parameter-->
+            <!-- arg value="-ojserver"/>
+            <arg value="-address "/>
+            <arg value="localhost:2010"/>
+            <arg value="-stdout "/>
+            <arg value="${oracle.ojdeploy.output.dir}/ojdeploy-stdout.txt"/-->
+            <ora:deploy>
+                <ora:parameter name="workspace" value="${oracle.ojdeploy.workspace}"/>
+                <ora:parameter name="profile" value="${oracle.ojdeploy.profile}"/>
+                <ora:parameter name="forcerewrite" value="true"/>
+            </ora:deploy>
+        </ora:ojdeploy>
+        <available file="${oracle.ojdeploy.output.file}" property="oracle.ojdeploy.output.file.found"
+                   description="Merken, ob ein Buildartefakt erzeugt wurde (evt. gab es kein solches Deploymentprofile und damit kein Artefakt)"/>
+    </target>
+    <target name="sub_undeploy_per_ear" description="Modularisierung des Undeployments">
+        <echo message="${oracle.wldeploy.ear.filepath}"/>
+        <propertyregex property="oracle.wldeploy.name" input="${oracle.wldeploy.ear.filepath}" regexp="^(.+\\)*(.+)\.(.+)$" select="\2"/>
+        <echo message="========= Entfernen des Deployments mit WLDeploy ${oracle.wldeploy.name} vom Oracle WebLogic Server ${oracle.wls.target} =="></echo>
+        <wldeploy action="undeploy" verbose="true" debug="false" name="${oracle.wldeploy.name}"
+                  library="${oracle.wldeploy.library}" user="${oracle.wls.user}" password="${oracle.wls.password}"
+                  failonerror="false" adminurl="${oracle.wls.admin_url}" targets="${oracle.wls.target}"
+                  allversions="true"/>
+    </target>
+    <target name="sub_undeploy_web_applications"
+            description="Entfernen der Web-Applikationen vom Oracle WebLogic Server"
+            depends="sub_init_web_applications">
+        <foreach target="sub_undeploy_per_ear"
+                 param="oracle.wldeploy.ear.filepath" inheritall="true">
+            <path>
+                <fileset dir="${oracle.ojdeploy.output.dir}" casesensitive="yes"
+                         includes="webapp.ear"/>
+            </path>
+        </foreach>
+    </target>
+    <target name="sub_deploy_per_ear" description="Modularisierung des (Re-)Deployments">
+        <echo message="${oracle.wldeploy.ear.filepath}"/>
+        <propertyregex property="oracle.wldeploy.name" input="${oracle.wldeploy.ear.filepath}" regexp="^(.+\\)*(.+)\.(.+)$" select="\2"/>
+        <echo message="========= Deployment mit WLDeploy ${oracle.wldeploy.name} auf dem Oracle WebLogic Server ${oracle.wls.target} =="></echo>
+        <wldeploy action="deploy" verbose="true" debug="false" name="${oracle.wldeploy.name}"
+                  source="${oracle.wldeploy.ear.filepath}" library="${oracle.wldeploy.library}" user="${oracle.wls.user}"
+                  password="${oracle.wls.password}" failonerror="true" upload="true" adminurl="${oracle.wls.admin_url}"
+                  targets="${oracle.wls.target}" appversion="${build.number}" nostage="true"/>
+    </target>
+    <target name="sub_deploy_web_applications"
+            description="Deployment der Web-Applikationen auf dem Oracle WebLogic Server"
+            depends="sub_init_web_applications">
+        <foreach target="sub_deploy_per_ear"
+                 param="oracle.wldeploy.ear.filepath" inheritall="true">
+            <path>
+                <fileset dir="${oracle.ojdeploy.output.dir}" casesensitive="yes"
+                         includes="webapp.ear"/>
+            </path>
+        </foreach>
+    </target>
+</project>

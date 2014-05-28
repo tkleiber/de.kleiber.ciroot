@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project default="all">
+    <import file="properties.xml" description="Import zentraler Eigenschaften"/>
+    <property name="test.excludes" value="results,**/.data/**"/>
+    <target name="junit.clean.test.deploy" description="Löschen Junit Output-Verzeichnisse">
+        <subant target="sub.junit.clean" genericantfile="test_sub.xml" inheritall="true">
+            <dirset dir="${sources.home}" includes="**/*test.deploy" excludes="${test.excludes}"/>
+        </subant>
+    </target>
+    <target name="junit.run.test.deploy"
+            description="Junit Tests ausführen im Sourcecode-Baum tstd (Tests nach Deployment)">
+        <subant target="sub.junit.run.test.deploy" genericantfile="test_sub.xml" inheritall="true">
+            <dirset dir="${sources.home}" includes="**/*test.deploy" excludes="${test.excludes}"/>
+        </subant>
+        <available file="${user.dir}/test.failure" property="test.failure"/>
+        <delete file="${user.dir}/test.failure"/>
+        <fail message="target junit.run.test.deploy fails, Webanwendung deployt und gestartet?" if="test.failure"/>
+    </target>
+    <target name="junit.run.test.deploy.one" description="einen Junit Tests ausführen zur Initialsierung">
+        <subant target="sub.junit.run.test.deploy.one" genericantfile="test_sub.xml" inheritall="true">
+            <dirset dir="${sources.home}" includes="${project.filter.test.deploy.one.includes}" excludes="${test.excludes}"/>
+        </subant>
+        <delete file="${user.dir}/test.failure"/>
+    </target>
+    <target name="junit.clean.test.build" description="Löschen Junit Output-Verzeichnisse">
+        <subant target="sub.junit.clean" genericantfile="test_sub.xml" inheritall="true">
+            <dirset dir="${sources.home}" includes="**/*test.build" excludes="${test.excludes}"/>
+        </subant>
+    </target>
+    <target name="junit.run.test.build" description="Junit Tests ausführen im Sourcecode-Baum tst (Tests nach Build)">
+        <subant target="sub.junit.run.test.build" genericantfile="test_sub.xml" inheritall="true">
+            <dirset dir="${sources.home}" includes="**/*test.build" excludes="${test.excludes}"/>
+        </subant>
+        <available file="${user.dir}/test.failure" property="test.failure"/>
+        <delete file="${user.dir}/test.failure"/>
+        <fail message="target junit.run.test.build fails" if="test.failure"/>
+    </target>
+    <target name="test.deploy" description="Ausführen aller Tests">
+        <antcall target="junit.run.test.deploy"></antcall>
+    </target>
+    <target name="test.build" description="Ausführen aller Tests">
+        <antcall target="junit.run.test.build"></antcall>
+    </target>
+    <target name="all" description="Ausführen aller Tests">
+        <antcall target="test.build"></antcall>
+        <antcall target="test.deploy"></antcall>
+    </target>
+    <target name="all.clean" description="Ausführen aller Tests">
+        <antcall target="junit.clean.test.build"></antcall>
+        <antcall target="junit.clean.test.deploy"></antcall>
+    </target>
+</project>

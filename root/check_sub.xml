@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project>
+  <import file="jdev_libs.xml"/>
+  <!-- findbugs -->
+  <property name="findbugs.home" value="${libs.home}/findbugs"/>
+  <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask">
+    <classpath>
+      <pathelement location="${findbugs.home}/lib/findbugs-ant.jar"/>
+    </classpath>
+  </taskdef>
+  <target name="sub.findbugs">
+    <echo message="Findbugs is running on directory: ${basedir}" level="info"></echo>
+    <!-- TODO Compile / Ojdeploy the project-->
+    <path id="findbugs.classpath">
+      <fileset dir="${sources.dir.findbugs}" includes="**/*.class"></fileset>
+      <fileset dir="${libs.home}/kleiber" includes="**/*.jar"></fileset>
+      <fileset dir="${libs.home}/mockito" includes="**/*.jar"></fileset>
+      <fileset dir="${libs.home}/powermock" includes="**/*.jar"></fileset>
+      <fileset dir="${libs.home}/selenium" includes="**/*.jar"></fileset>
+      <path refid="jdeveloper.classpath"/>
+      <fileset description="addional library in summit model project"
+               file="${sources.home}/SummitADF_Core1212/Model/src/com/avantools/utils/DbCallLibrary.jar"/>
+    </path>
+    <mkdir dir="results/findbugs"/>
+    <delete file="results/findbugs/findbugs_all.xml"/>
+    <if>
+      <equals arg1="${external.findbugs.output.format}" arg2="xml"/>
+      <then>
+        <findbugs home="${findbugs.home}" output="xml" reportlevel="${findbugs.minimum.priority}"
+                  outputfile="${basedir}/results/findbugs/findbugs_all.xml">
+          <class location="classes"/>
+          <sourcePath path="src"/>
+          <auxClasspath refid="findbugs.classpath"/>
+        </findbugs>
+      </then>
+      <else>
+        <findbugs home="${findbugs.home}" output="text" reportlevel="${findbugs.minimum.priority}">
+          <class location="classes"/>
+          <sourcePath path="src"/>
+          <auxClasspath refid="findbugs.classpath"/>
+        </findbugs>
+      </else>
+    </if>
+    <!-- delete all files which contains no errors, because error for empty files in jenkins plugin -->
+    <delete dir="results/findbugs">
+      <and>
+        <size value="0"/>
+        <type type="file"/>
+      </and>
+    </delete>
+  </target>
+</project>

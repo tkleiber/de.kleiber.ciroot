@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project xmlns:jacoco="antlib:org.jacoco.ant">
+    <import file="jdev_libs.xml" description="Import ADF Bibliotheken"/>
+    <!-- jacoco -->
+    <property name="jacoco.file" location="${libs.home}/jacoco/lib/jacocoant.jar"/>
+    <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml">
+        <classpath path="${jacoco.file}"/>
+    </taskdef>
+    <propertyregex property="base.project.dir" input="${basedir}" regexp="(.*)(\.test\.)(build|deploy)" select="\1"/>
+    <property name="base.project.sources.dir" value="${base.project.dir}${file.separator}src"/>
+    <property name="base.project.classes.dir" value="${base.project.dir}${file.separator}${output.dir}"/>
+    <property name="test.project.classes.dir" value="${basedir}${file.separator}${output.dir}"/>
+    <path id="classpath.test" description="Classpath für die Testauführung, es werden die Artefakte getestet!">
+        <pathelement location="${test.project.classes.dir}"/>
+        <pathelement location="../.adf"/>
+        <pathelement location="../src/META-INF"/>
+        <fileset dir="${libs.home}/selenium/lib" includes="**/*.jar"></fileset>
+        <fileset dir="${libs.home}/log4j/lib" includes="**/*.jar"></fileset>
+        <fileset dir="${libs.home}/kleiber/lib" includes="**/*.jar"></fileset>
+        <fileset dir="${libs.home}/mockito/lib" includes="**/*.jar"></fileset>
+        <fileset dir="${libs.home}/powermock/lib" includes="**/*.jar"></fileset>
+        <fileset dir="${libs.home}/javaassist/lib" includes="**/*.jar"></fileset>
+        <path refid="jdeveloper.classpath"/>
+    </path>
+    <!-- jacoco Variablen -->
+    <property name="jacoco.results.dir" location="${basedir}/results/jacoco"/>
+    <property name="jacoco.exec.file" location="${jacoco.results.dir}/jacoco.exec"/>
+    <path id="jacoco.project.name.id">
+        <fileset dir="${basedir}">
+            <include name="*.jpr"/>
+        </fileset>
+    </path>
+    <property name="jacoco.project.file" refid="jacoco.project.name.id"/>
+    <basename property="jacoco.project.name" file="${jacoco.project.file}" suffix=".jpr"/>
+    <propertyregex property="jacoco.class.jar" input="${jacoco.project.name}" regexp="(.*)(\.test\.)(build|deploy)"
+                   select="\1"/>
+    <property name="jacoco.instrumented.classes.dir" value="${jacoco.results.dir}${file.separator}${output.dir}"/>
+    <target name="sub.junit.fail" if="test.failure"
+            description="Anlegen Dateimerker für Identifikation im Mastertestbuild">
+        <touch file="${user.dir}/test.failure"/>
+    </target>
+    <target name="sub.junit.clean" description="Löschen Junit Output-Verzeichnisse">
+        <delete dir="${basedir}/results/junit"/>
+        <delete dir="${basedir}/results/selenium"/>
+        <delete dir="${jacoco.results.dir}"/>
+        <delete dir="${test.project.classes.dir}"/>
+    </target>
+    <target name="sub.junit.run" if="test.found" description="Junit Tests ausführen">
+        <antcall target="sub.junit.clean"/>
+        <mkdir dir="${basedir}/results/junit"/>
+        <condition property="sub.junit.run.test.inlude" description="Muster auszuführende Tests" value="${test.inlude}"
+                   else="**/*Test*.java">
+            <isset property="test.inlude"/>
+        </condition>
+        <!-- Offline Instrumentation wg. Mockito, Powermock: http://www.eclemma.org/jacoco/trunk/doc/offline.html -->
+        <!-- "Conflicts with other agents that do dynamic classfile transformation." -->
+        <if>
+            <equals arg1="${doCoverage}" arg2="true"/>
+            <then>
+                <jacoco:instrument destdir="${jacoco.instrumented.classes.dir}">
+                    <fileset dir="${base.project.classes.dir}" includes="**/*.class"/>
+                </jacoco:instrument>
+                <path id="classpath.junit">
+                    <pathelement location="${jacoco.instrumented.classes.dir}"/>
+                    <path refid="classpath.test"/>
+                </path>
+            </then>
+            <else>
+                <path id="classpath.junit">
+                    <pathelement location="${base.project.classes.dir}"/>
+                    <path refid="classpath.test"/>
+                </path>
+            </else>
+        </if>
+        <mkdir dir="${test.project.classes.dir}"/>
+        <javac srcdir="${test.project.sources.dir}" destdir="${test.project.classes.dir}" includeantruntime="false"
+               encoding="UTF-8">
+            <classpath refid="classpath.junit"/>
+        </javac>
+        <jacoco:coverage destfile="${jacoco.exec.file}" enabled="${doCoverage}">
+            <junit printsummary="yes" failureproperty="test.failure" fork="true" forkmode="once">
+                <jvmarg value="-XX:MaxPermSize=256M"/>
+                <!--sysproperty key="oracle.security.jps.config"
+                value="${basedir}/../src/META-INF/jps-config.xml"/-->
+                <classpath refid="classpath.junit"/>
+                <formatter type="xml"/>
+                <batchtest fork="yes" todir="${basedir}/results/junit">
+                    <fileset dir="${test.project.sources.dir}">
+                        <include name="${sub.junit.run.test.inlude}"/>
+                        <exclude name="**/AllTests.java"/>
+                    </fileset>
+                </batchtest>
+            </junit>
+        </jacoco:coverage>
+        <if>
+            <equals arg1="${doCoverage}" arg2="true"/>
+            <then>
+                <jacoco:report>
+                    <!-- This task needs the collected execution data and ... -->
+                    <executiondata>
+                        <file file="${jacoco.exec.file}"/>
+                    </executiondata>
+                    <!-- the class files and optional source files ... -->
+                    <structure name="${base.project.dir}">
+                        <classfiles>
+                            <fileset dir="${base.project.classes.dir}"/>
+                        </classfiles>
+                        <sourcefiles encoding="UTF-8">
+                            <fileset dir="${base.project.sources.dir}"/>
+                        </sourcefiles>
+                    </structure>
+                    <!-- to produce reports in different formats. -->
+                    <html destdir="${jacoco.results.dir}"/>
+                    <xml destfile="${jacoco.results.dir}/report.xml"/>
+                </jacoco:report>
+            </then>
+        </if>
+        <antcall target="sub.junit.fail"/>
+    </target>
+    <target name="sub.junit.run.test.deploy" description="Junit Tests ausführen (Tests nach Deployment)">
+        <echo message="basedir: ${basedir}" level="info"></echo>
+        <property name="doCoverage" value="false"/>
+        <property name="test.project.sources.dir" value="${basedir}/src"/>
+        <available file="${test.project.sources.dir}" property="test.found"></available>
+        <antcall target="sub.junit.run"></antcall>
+    </target>
+    <target name="sub.junit.run.test.deploy.one" description="einen Junit Tests ausführen zur Initialsierung">
+        <echo message="basedir: ${basedir}" level="info"></echo>
+        <property name="doCoverage" value="false"/>
+        <property name="test.project.sources.dir" value="${basedir}/src"/>
+        <property name="test.inlude" value="**/KredaWebappTest.java"/>
+        <available file="${test.project.sources.dir}" property="test.found"></available>
+        <antcall target="sub.junit.run"></antcall>
+    </target>
+    <target name="sub.junit.run.test.build" description="Junit Tests ausführen (Tests nach Build)">
+        <echo message="basedir: ${basedir}" level="info"></echo>
+        <property name="doCoverage" value="true"/>
+        <property name="test.project.sources.dir" value="${basedir}/src"/>
+        <available file="${test.project.sources.dir}" property="test.found"></available>
+        <antcall target="sub.junit.run"></antcall>
+    </target>
+</project>

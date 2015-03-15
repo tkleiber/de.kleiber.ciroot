@@ -19,6 +19,8 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.eclipse.persistence.jpa.rs.exceptions.IllegalArgumentExceptionMapper;
+
 import static org.junit.Assert.fail;
 
 import org.openqa.selenium.By;
@@ -31,6 +33,7 @@ import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.ie.InternetExplorerDriver;
@@ -62,6 +65,9 @@ public class UITestDriver {
 
     /** Browser Firefox. */
     public static final String FIREFOX_DRIVER = "firefox";
+
+    /** Browser Chrome. */
+    public static final String CHROME_DRIVER = "chrome";
 
     /** Browser Internet Explorer. */
     public static final String IE_DRIVER = "internet explorer";
@@ -146,12 +152,34 @@ public class UITestDriver {
             log4j.debug("BrowserName= {} ", browserName);
             capabilities.setPlatform(platform);
             log4j.debug("Platform= {}", platform);
+            capabilities.setCapability("ignoreZoomSetting", true);
 
             if (FIREFOX_DRIVER.equals(browserName)) {
                 log4j.debug("Setting up FirefoxDriver Profile");
                 FirefoxProfile profile = new FirefoxProfile();
-                profile.setPreference("network.http.phishy-userpass-length", DISABLE_MOZILLA_WARNING);
+                try {
+                    profile.setPreference("network.http.phishy-userpass-length", DISABLE_MOZILLA_WARNING);
+                } catch (IllegalArgumentException e) {
+                    log4j.debug(e.getMessage());
+                }
                 capabilities.setCapability(FirefoxDriver.PROFILE, profile);
+            } else if (CHROME_DRIVER.equals(browserName)) {
+                log4j.debug("Setting up Chrome Profile");
+                if (!TEST_GRID) {
+                    log4j.debug("Test runs NOT against GRID");
+                     final URL url = ChromeDriver.class.getProtectionDomain().getCodeSource().getLocation();
+                    File fPath = null;
+                    try {
+                        fPath = new File(url.toURI());
+                    } catch (URISyntaxException e) {
+                        fPath = new File(url.getPath());
+                    }
+                    String sPath = fPath.toString();
+                    log4j.debug("Path to ChromeDriver.class is: " + sPath);
+                    String locationChromeDriver = sPath.substring(0, sPath.lastIndexOf("\\") + 1) + "chromedriver.exe";
+                    System.setProperty("webdriver.chrome.driver", locationChromeDriver);
+                    log4j.debug("Setting webdriver.chrome.driver to {}", locationChromeDriver);
+                }
             } else if (IE_DRIVER.equals(browserName)) {
                 log4j.debug("Setting up IEDriver Profile");
                 capabilities.setCapability(InternetExplorerDriver.INTRODUCE_FLAKINESS_BY_IGNORING_SECURITY_DOMAINS,
@@ -191,6 +219,8 @@ public class UITestDriver {
             } else {
                 if (FIREFOX_DRIVER.equals(browserName)) {
                     driver = new FirefoxDriver(capabilities);
+                } else if (CHROME_DRIVER.equals(browserName)) {
+                    driver = new ChromeDriver(capabilities);
                 } else if (IE_DRIVER.equals(browserName)) {
                     driver = new InternetExplorerDriver(capabilities);
                 }
@@ -259,7 +289,7 @@ public class UITestDriver {
     /** Herunterfahren des Drivers. */
     public void tearDown() {
         log4j.entry();
-/*        
+        /*
         //Auf leere Seite navigieren um mögliches Alert zu erzwingen
         log4j.debug("Navigate to about:blank");
         driver.get("about:blank");

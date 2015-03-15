@@ -13,14 +13,14 @@
             <dirset dir="${sources.home}" includes="**/*test.deploy" excludes="${test.excludes}"/>
         </subant>
         <available file="${user.dir}/test.failure" property="test.failure"/>
-        <delete file="${user.dir}/test.failure"/>
+        <delete file="${user.dir}/test.failure" failonerror="false"/>
         <fail message="target junit.run.test.deploy fails, Webanwendung deployt und gestartet?" if="test.failure"/>
     </target>
     <target name="junit.run.test.deploy.one" description="einen Junit Tests ausführen zur Initialsierung">
         <subant target="sub.junit.run.test.deploy.one" genericantfile="test_sub.xml" inheritall="true">
             <dirset dir="${sources.home}" includes="${project.filter.test.deploy.one.includes}" excludes="${test.excludes}"/>
         </subant>
-        <delete file="${user.dir}/test.failure"/>
+        <delete file="${user.dir}/test.failure" failonerror="false"/>
     </target>
     <target name="junit.clean.test.build" description="Löschen Junit Output-Verzeichnisse">
         <subant target="sub.junit.clean" genericantfile="test_sub.xml" inheritall="true">
@@ -32,7 +32,7 @@
             <dirset dir="${sources.home}" includes="**/*test.build" excludes="${test.excludes}"/>
         </subant>
         <available file="${user.dir}/test.failure" property="test.failure"/>
-        <delete file="${user.dir}/test.failure"/>
+        <delete file="${user.dir}/test.failure" failonerror="false"/>
         <fail message="target junit.run.test.build fails" if="test.failure"/>
     </target>
     <target name="test.deploy" description="Ausführen aller Tests">

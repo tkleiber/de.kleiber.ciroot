@@ -8,6 +8,12 @@
           "maxInstances": ###FIREFOX_MAX_INSTANCES###
         },
         {
+          "browserName": "chrome",
+          "version": "###CHROME_TEST_PROFILE###",
+          "platform": "WINDOWS",
+          "maxInstances": ###CHROME_MAX_INSTANCES###
+        },
+        {
           "browserName": "internet explorer",
           "version": "###INTERNET_EXPLORER_TEST_PROFILE###",
           "platform": "WINDOWS",
@@ -28,7 +34,7 @@
         "register":true,
         "cleanUpCycle":2000,
         "timeout":300000,
-        "maxSession":###MAX_SESSIONS###,
+        "maxSession":###MAX_SESSIONS###
         }
 }
  

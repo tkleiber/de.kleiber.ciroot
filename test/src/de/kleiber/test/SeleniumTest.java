@@ -59,9 +59,7 @@ public class SeleniumTest {
         } catch (URISyntaxException e) {
             path = new File(url.getPath());
         }
-        System.out.println("basePath  " + path);
         String neu = SeleniumTest.class.getResource("log4j2-test.xml").toString();
-        System.out.println("modified: " + neu);
         System.setProperty("log4j.configurationFile", neu);
     }
 

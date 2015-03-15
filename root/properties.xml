@@ -8,7 +8,7 @@
     <property name="output.dir" value="classes"/>
     <!-- Umgebungsspezifische Konfiguration -->
     <condition property="oracle.middleware.dir" description="Verzeichnis der Oracle Middleware Installation"
-               value="${env.HOME}" else="C:\Oracle\JDev121200">
+               value="${env.HOME}" else="C:\Oracle\JDev121300">
         <isset property="env.HOME"/>
     </condition>
     <!-- Oracle Middleware Konfiguration -->

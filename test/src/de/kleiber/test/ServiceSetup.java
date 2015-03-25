@@ -49,7 +49,9 @@ public abstract class ServiceSetup {
     }
 
     private void createApplicationModule() {
-        applicationModule = createRootApplicationModule(applicationModuleName(), applicationModuleConfiguration());
+        applicationModule =
+                createRootApplicationModule(applicationModuleName(),
+                                            applicationModuleConfiguration());
     }
 
     private void authenticateApplicationUser() {
@@ -59,6 +61,9 @@ public abstract class ServiceSetup {
 
     @After
     public void cleanupModule() {
-        releaseRootApplicationModule(applicationModule, true);
+        if(applicationModule != null){
+            releaseRootApplicationModule(applicationModule, true);    
+        }
+        
     }
 }

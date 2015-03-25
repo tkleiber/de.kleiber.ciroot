@@ -43,6 +43,7 @@ import org.openqa.selenium.remote.Augmenter;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 
 /**
@@ -51,6 +52,7 @@ import org.openqa.selenium.support.ui.Select;
  * Weiterhin werden auch verschiedene Browser unterstützt.
  */
 public class UITestDriver {
+    
     /** WebDriver-Instanz. */
     private static WebDriver driver;
 
@@ -82,7 +84,8 @@ public class UITestDriver {
     private static final String DATE_FORMAT = "yyMMdd_HHmmss";
 
     /** URL des Selenium Grid Hub Server. */
-    private static final String SELENIUM_GRID = "http://localhost:4444/wd/hub";
+    private static final String SELENIUM_GRID =
+        "http://ikb-selenium.ikb.de:4444/wd/hub";
 
     /** Standard-Timeout, nach dem Selenium-Aktionen abgebrochen werden. */
     public static final int STD_DRIVER_TIMEOUT = 30;
@@ -97,28 +100,76 @@ public class UITestDriver {
     public static final String TEST_DRIVER = System.getenv("TEST_DRIVER");
 
     /** Testtreiberversion der Umgebung. */
-    public static final String TEST_DRIVER_VERSION = System.getenv("TEST_DRIVER_VERSION");
+    public static final String TEST_DRIVER_VERSION =
+        System.getenv("TEST_DRIVER_VERSION");
 
     /** Testtreiberplattform der Umgebung. */
-    public static final String TEST_DRIVER_PLATFORM = System.getenv("TEST_DRIVER_PLATFORM");
+    public static final String TEST_DRIVER_PLATFORM =
+        System.getenv("TEST_DRIVER_PLATFORM");
 
     /** Basisurl des Testsystem der Umgebung. */
-    public static final String TEST_BASIS_URL_ENV = System.getenv("TEST_BASIS_URL");
+    public static final String TEST_BASIS_URL_ENV =
+        System.getenv("TEST_BASIS_URL");
 
     /** Basisurl des Testsystem des JDevelopers. */
-    public static final String TEST_BASIS_URL_LOCAL = ("http://localhost:7101/");
+    public static final String TEST_BASIS_URL_LOCAL =
+        ("http://localhost:7101/");
 
     /** Erfolgt der Test gegen Selenium Grid? */
     public static final boolean TEST_GRID = (TEST_BASIS_URL_ENV != null);
 
     /** Basisurl des Testsystem. */
-    public static final String TEST_BASIS_URL = TEST_GRID ? TEST_BASIS_URL_ENV : TEST_BASIS_URL_LOCAL;
+    public static final String TEST_BASIS_URL =
+        TEST_GRID ? TEST_BASIS_URL_ENV : TEST_BASIS_URL_LOCAL;
 
     /** Logger. */
-    private static Logger log4j = LogManager.getLogger(UITestDriver.class.getName());
+    private static Logger log4j =
+        LogManager.getLogger(UITestDriver.class.getName());
 
     /** Avoid mozilla dialog to warn the user when visiting URLs that use the username and password syntax. */
     private static final int DISABLE_MOZILLA_WARNING = 255;
+
+    /** ALT Test zum Image des Status Indicators zur Abfrage, ob AJAX-Calls aktiv sind. */
+    private static final String IMAGE_ALT_TEXT_STATUS_INDICATOR = "Frei";
+
+    /** XPath zum Image des Status Indicators zur Abfrage, ob AJAX-Calls aktiv sind. */
+    private String xPathStatusIndicatorImage = "//span[@id='pt1:pt_si1']/img";
+
+
+    /** Schalter zum Abschalten der Abfrage, ob AJAX-Calls aktiv sind. */
+    private boolean checkAjaxCalls = true;
+
+    /**
+     * Enumeration der Zugriffstypen, um aus einem textuellen Identifikator ein By Objekt zu ermitteln.
+     * Der Identifikator wird dem Zugriffstyp als String value übergeben.
+     *
+     * Unterstützte Zugriffstypen:
+     *
+     * XPATH:        Zugriff via xpath
+     * ID:           Zugriff via Id
+     * CSS_SELECTOR: Zugriff via CSS Selektor (ACHTUNG: scheint mit den aus Firefox 10 erzeugten Identifikatoren g
+     *               egen IE9 nicht zu funktionieren)
+     */
+    public enum ByAccessType {
+        XPATH {
+            public By createBy(String value) {
+                return By.xpath(value);
+            }
+        },
+        ID {
+            public By createBy(String value) {
+                return By.id(value);
+            }
+        },
+        CSS_SELECTOR {
+            public By createBy(String value) {
+                return By.cssSelector(value);
+            }
+
+        };
+
+        public abstract By createBy(String value);
+    }
 
     /**
      * UITestDriver des DEFAULT-Types.
@@ -130,6 +181,14 @@ public class UITestDriver {
         log4j.debug("testClass=" + testClass);
         setUp(testClass);
         log4j.exit();
+    }
+
+    public void setCheckAjaxCalls(boolean checkAjaxCalls) {
+        this.checkAjaxCalls = checkAjaxCalls;
+    }
+
+    public boolean isCheckAjaxCalls() {
+        return checkAjaxCalls;
     }
 
     /**
@@ -158,9 +217,10 @@ public class UITestDriver {
                 log4j.debug("Setting up FirefoxDriver Profile");
                 FirefoxProfile profile = new FirefoxProfile();
                 try {
-                    profile.setPreference("network.http.phishy-userpass-length", DISABLE_MOZILLA_WARNING);
-                } catch (IllegalArgumentException e) {
-                    log4j.debug(e.getMessage());
+                    profile.setPreference("network.http.phishy-userpass-length",
+                                          DISABLE_MOZILLA_WARNING);
+                } catch (IllegalArgumentException e){
+                    log4j.debug("Catch the error that this is set already: " + e.getMessage());
                 }
                 capabilities.setCapability(FirefoxDriver.PROFILE, profile);
             } else if (CHROME_DRIVER.equals(browserName)) {
@@ -186,11 +246,8 @@ public class UITestDriver {
                                            true);
                 if (!TEST_GRID) {
                     log4j.debug("Test runs NOT against GRID");
-                    /*
-                    File path =
-                        new File(InternetExplorerDriver.class.getResource("InternetExplorerDriver.class").getPath());
-*/
-                    final URL url = InternetExplorerDriver.class.getProtectionDomain().getCodeSource().getLocation();
+                    final URL url =
+                        InternetExplorerDriver.class.getProtectionDomain().getCodeSource().getLocation();
                     File fPath = null;
                     try {
                         fPath = new File(url.toURI());
@@ -198,10 +255,15 @@ public class UITestDriver {
                         fPath = new File(url.getPath());
                     }
                     String sPath = fPath.toString();
-                    log4j.debug("Path to InternetExplorerDriver.class is: " + sPath);
-                    String locationIeDriver = sPath.substring(0, sPath.lastIndexOf("\\") + 1) + "IEDriverServer.exe";
-                    System.setProperty("webdriver.ie.driver", locationIeDriver);
-                    log4j.debug("Setting webdriver.ie.driver to {}", locationIeDriver);
+                    log4j.debug("Path to InternetExplorerDriver.class is: " +
+                                sPath);
+                    String locationIeDriver =
+                        sPath.substring(0, sPath.lastIndexOf(File.separator) +
+                                        1) + "IEDriverServer.exe";
+                    System.setProperty("webdriver.ie.driver",
+                                       locationIeDriver);
+                    log4j.debug("Setting webdriver.ie.driver to {}",
+                                locationIeDriver);
                 }
             }
             if (TEST_GRID) {
@@ -211,7 +273,8 @@ public class UITestDriver {
                 }
                 log4j.debug("DriverVersion= {}", capabilities.getVersion());
                 try {
-                    driver = new RemoteWebDriver(new URL(SELENIUM_GRID), capabilities);
+                    driver =
+                            new RemoteWebDriver(new URL(SELENIUM_GRID), capabilities);
                 } catch (MalformedURLException e) {
                     fail(e.getMessage());
                 }
@@ -225,11 +288,14 @@ public class UITestDriver {
                     driver = new InternetExplorerDriver(capabilities);
                 }
             }
-            driver.manage().timeouts().implicitlyWait(STD_DRIVER_TIMEOUT, TimeUnit.SECONDS);
+            driver.manage().timeouts().implicitlyWait(STD_DRIVER_TIMEOUT,
+                                                      TimeUnit.SECONDS);
             log4j.debug("ImplicityWait= {}", STD_DRIVER_TIMEOUT);
-            driver.manage().timeouts().pageLoadTimeout(STD_DRIVER_TIMEOUT, TimeUnit.SECONDS);
+            driver.manage().timeouts().pageLoadTimeout(STD_DRIVER_TIMEOUT,
+                                                       TimeUnit.SECONDS);
             log4j.debug("pageLoadTimeout= {}", STD_DRIVER_TIMEOUT);
-            driver.manage().timeouts().setScriptTimeout(STD_DRIVER_TIMEOUT, TimeUnit.SECONDS);
+            driver.manage().timeouts().setScriptTimeout(STD_DRIVER_TIMEOUT,
+                                                        TimeUnit.SECONDS);
             log4j.debug("ScriptTimeout= {}", STD_DRIVER_TIMEOUT);
 
             if (driver == null) {
@@ -253,7 +319,8 @@ public class UITestDriver {
      */
     private String getResultDirectory(final Class testClass) {
         log4j.entry(testClass);
-        URL url = testClass.getProtectionDomain().getCodeSource().getLocation();
+        URL url =
+            testClass.getProtectionDomain().getCodeSource().getLocation();
         File path = null;
         try {
             path = new File(url.toURI());
@@ -262,7 +329,8 @@ public class UITestDriver {
         }
         log4j.debug("Path= {}", path);
         String neu =
-            path.toString().substring(0, path.toString().lastIndexOf("\\") + 1) + "results" + File.separator +
+            path.toString().substring(0, path.toString().lastIndexOf(File.separator) +
+                                      1) + "results" + File.separator +
             "selenium";
         return log4j.exit(neu);
 
@@ -289,23 +357,6 @@ public class UITestDriver {
     /** Herunterfahren des Drivers. */
     public void tearDown() {
         log4j.entry();
-        /*
-        //Auf leere Seite navigieren um mögliches Alert zu erzwingen
-        log4j.debug("Navigate to about:blank");
-        driver.get("about:blank");
-        try {
-            log4j.debug("Switch to alert");
-            Alert alert = driver.switchTo().alert();
-            if (alert != null) {
-                log4j.debug("acceptAlert");
-                //Sollte das Alert kommen auf ok klicken
-                alert.accept();
-            }
-        } catch (NoAlertPresentException e) {
-            log4j.catching(Level.DEBUG, e);
-            //Kein Alert  vorhanden, dann normal weitermachen
-        }
-*/
         log4j.debug("Quit Driver");
         driver.quit();
         driver = null;
@@ -314,34 +365,13 @@ public class UITestDriver {
     }
 
     /**
-     * Warte darauf, dass das übergebene Element hinzugefügt wird.
-     * @param by Element im Dokument
+     * Warten auf den Abschluss AJAX Calls. Wenn Calls ausgeführt werden, wird ein animiertes GIF ausgeführt, sonst ein
+     * statische PNG.
      */
-    public void waitForElementPresent(final By by) {
-        log4j.entry(by);
-        for (int second = 0; !isElementPresent(by); second++) {
-            log4j.debug("Second= {}", second);
-            if (second >= timeoutAjax) {
-                fail("timeout");
-            }
-            sleep(STD_AJAX_LOOP_WAIT);
+    public void waitForAjaxCalls() {
+        if (isCheckAjaxCalls()) {
+            new WebDriverWait(driver, UITestDriver.timeoutAjax).until(new ClientSynchedWithServer());
         }
-        log4j.exit();
-    }
-
-    /**
-     * Warte darauf, dass das übergebene Element entfernt wird.
-     * @param by Element im Dokument
-     */
-    public void waitForElementNotPresent(final By by) {
-        log4j.entry(by);
-        for (int second = 0; isElementPresent(by); second++) {
-            if (second >= timeoutAjax) {
-                fail("timeout");
-            }
-            sleep(STD_AJAX_LOOP_WAIT);
-        }
-        log4j.exit();
     }
 
     /**
@@ -350,6 +380,7 @@ public class UITestDriver {
      */
     public void waitForVisible(final By by) {
         log4j.entry(by);
+        waitForAjaxCalls();
         WebElement element = findElement(by);
         waitForVisible(element);
         log4j.exit();
@@ -362,26 +393,6 @@ public class UITestDriver {
     private void waitForVisible(final WebElement element) {
         log4j.entry(element);
         for (int second = 0; !element.isDisplayed(); second++) {
-            if (second >= timeoutAjax) {
-                fail("timeout");
-            }
-            /*
-            if (element.isDisplayed()) {
-                break;
-            }
-*/
-            sleep(STD_AJAX_LOOP_WAIT);
-        }
-        log4j.exit();
-    }
-
-    /**
-     * Warte darauf, dass das übergebene Element verborgen wird.
-     * @param by Element im Dokument
-     */
-    public void waitForNotVisible(final By by) {
-        log4j.entry(by);
-        for (int second = 0; findElement(by).isDisplayed(); second++) {
             if (second >= timeoutAjax) {
                 fail("timeout");
             }
@@ -412,29 +423,14 @@ public class UITestDriver {
     }
 
     /**
-     * Warte darauf, dass das Attribut value des übergebene Element den übergebenen Wert enthält.
-     * @param by Element im Dokument
-     * @param value erwarteter Wert
-     */
-    public void waitForValue(final By by, final String value) {
-        log4j.entry(by);
-        for (int second = 0; !value.equals(getAttribute(by, "value")); second++) {
-            if (second >= timeoutAjax) {
-                fail("timeout");
-            }
-            sleep(STD_AJAX_LOOP_WAIT);
-        }
-        log4j.exit();
-    }
-
-    /**
      * Warte darauf, dass das Attribut alt des übergebene Element den übergebenen Wert enthält.
      * @param by Element im Dokument
      * @param value erwarteter Wert
      */
-    public void waitForAlt(final By by, final String value) {
+    private void waitForAlt(final By by, final String value) {
         log4j.entry(by);
-        for (int second = 0; !value.equals(getAttribute(by, "alt")); second++) {
+        for (int second = 0; !value.equals(getAttribute(by, "alt"));
+             second++) {
             if (second >= timeoutAjax) {
                 fail("timeout");
             }
@@ -469,6 +465,76 @@ public class UITestDriver {
             log4j.catching(Level.DEBUG, e);
             return false;
         }
+    }
+
+    /**
+     * Prüft ob das übergebene Element existiert/gefunden werden kann.
+     * @param value Identifikations String des Elementes
+     * @param type Zugriffstyp
+     * @return true/false
+     */
+    public boolean isElementPresent(String value, ByAccessType type) {
+        waitForAjaxCalls();
+        By by = type.createBy(value);
+        return isElementPresent(by);
+    }
+
+    /**
+     * Prüft ob das übergebene Element existiert/gefunden werden kann und angezeigt wird.
+     * @param by Element im Dokument
+     * @return true/false
+     */
+    public boolean isElementDisplayed(final By by) {
+        log4j.entry(by);
+
+        try {
+            WebElement e = driver.findElement(by);
+            return e.isDisplayed();
+        } catch (NoSuchElementException e) {
+            log4j.catching(Level.DEBUG, e);
+            return false;
+        }
+    }
+
+    /**
+     * Prüft ob das übergebene Element existiert/gefunden werden kann und angezeigt wird.
+     * @param value Identifikations String des Elementes
+     * @param type Zugriffstyp aus enum ByAccessType
+     * @return true/false
+     */
+    public boolean isElementDisplayed(String value, ByAccessType type) {
+        waitForAjaxCalls();
+        By by = type.createBy(value);
+        return isElementDisplayed(by);
+    }
+
+    /**
+     * Prüft ob das übergebene Element existiert/gefunden werden kann und enabled ist.
+     * @param by Element im Dokument
+     * @return true/false
+     */
+    public boolean isElementEnabled(final By by) {
+        log4j.entry(by);
+
+        try {
+            WebElement e = driver.findElement(by);
+            return e.isEnabled();
+        } catch (NoSuchElementException e) {
+            log4j.catching(Level.DEBUG, e);
+            return false;
+        }
+    }
+
+    /**
+     * Prüft ob das übergebene Element existiert/gefunden werden kann und enabled.
+     * @param value Identifikations String des Elementes
+     * @param type Zugriffstyp aus enum ByAccessType
+     * @return true/false
+     */
+    public boolean isElementEnabled(String value, ByAccessType type) {
+        waitForAjaxCalls();
+        By by = type.createBy(value);
+        return isElementEnabled(by);
     }
 
     /**
@@ -522,7 +588,8 @@ public class UITestDriver {
      * @param value zu findender String-Wert
      * @return Treffer: Zeile beginnend bei 0; Kein Treffer: -1
      */
-    public Integer findElementInTable(final String table, final String column, final String value) {
+    public Integer findElementInTable(final String table, final String column,
+                                      final String value) {
         log4j.entry(new Object[] { table, column, value });
         Integer row = 0;
         while (this.isElementPresent(By.id(table + row + column))) {
@@ -541,9 +608,11 @@ public class UITestDriver {
      * @param column ID der Spalte
      * @return Inhalt der Zelle
      */
-    public String getRowContent(final String table, final Integer row, final String column) {
+    public String getRowContent(final String table, final Integer row,
+                                final String column) {
         log4j.entry(new Object[] { table, row, column });
-        return log4j.exit(this.findElement(By.id(table + row + column)).getText());
+        return log4j.exit(this.findElement(By.id(table + row +
+                                                 column)).getText());
     }
 
     /**
@@ -552,7 +621,8 @@ public class UITestDriver {
      * @param column ID der Spalte
      * @param value zu findender String-Wert
      */
-    public void clickTableItem(final String table, final String column, final String value) {
+    public void clickTableItem(final String table, final String column,
+                               final String value) {
         log4j.entry(new Object[] { table, column, value });
         Integer row = 0;
         while (this.isElementPresent(By.id(table + row + column))) {
@@ -572,7 +642,8 @@ public class UITestDriver {
      * @param row ID der Zeile
      * @param column ID der Spalte
      */
-    public void clickTableItem(final String table, final Integer row, final String column) {
+    public void clickTableItem(final String table, final Integer row,
+                               final String column) {
         log4j.entry(new Object[] { table, row, column });
         this.findElement(By.id(table + row + column)).click();
         log4j.exit();
@@ -594,7 +665,8 @@ public class UITestDriver {
      * @param fileName Dateiname des Screenshots
      * @param suceed Bestimmt das <PREFIX> TRUE => OK, FALSE => F
      */
-    public void captureScreenshot(final String fileName, final boolean suceed) {
+    public void captureScreenshot(final String fileName,
+                                  final boolean suceed) {
         log4j.entry(new Object[] { fileName, suceed });
         final String pathName;
         if (suceed) {
@@ -611,7 +683,8 @@ public class UITestDriver {
      * @param fileName Dateiname
      * @param pathName Verzeichnis
      */
-    public void captureScreenshot(final String fileName, final String pathName) {
+    public void captureScreenshot(final String fileName,
+                                  final String pathName) {
         log4j.entry(new Object[] { fileName, pathName });
         final File dir = new File(pathName);
         if (!dir.exists()) {
@@ -625,7 +698,8 @@ public class UITestDriver {
             screenshotDriver = new Augmenter().augment(driver);
         }
 
-        File screenshotFile = ((TakesScreenshot) screenshotDriver).getScreenshotAs(OutputType.FILE);
+        File screenshotFile =
+            ((TakesScreenshot)screenshotDriver).getScreenshotAs(OutputType.FILE);
         try {
             FileUtils.copyFile(screenshotFile, new File(file));
         } catch (IOException e) {
@@ -691,7 +765,25 @@ public class UITestDriver {
      */
     public boolean isTextPresent(final String value) {
         //return driver.findElement(By.tagName("body")).getText().contains(str);
-        return this.isElementPresent(By.xpath("//*[contains(.,'" + value + "')]"));
+        return this.isElementPresent(By.xpath("//*[contains(.,'" + value +
+                                              "')]"));
+    }
+
+    /**
+     * Überprüft, ob ein übergebener Wert sichtbar ist.
+     * @param value übergebener Wert
+     * @return true/false
+     */
+    public boolean isTextPresent(String xpath, final String value) {
+        //return driver.findElement(By.tagName("body")).getText().contains(str);
+        // abschliessendes ] ggfs. entfernen
+        if (xpath.endsWith("]")) {
+            xpath = xpath.substring(0, xpath.length() - 1) + " and ";
+        } else {
+            xpath = xpath + "[";
+        }
+        return this.isElementPresent(By.xpath(xpath + "contains(text(), '" +
+                                              value + "')]"));
     }
 
 
@@ -709,7 +801,9 @@ public class UITestDriver {
      */
     public static void setTestClass(final Class testClass) {
         log4j.entry(testClass);
-        String className = testClass.getName().substring(testClass.getName().lastIndexOf(".") + 1);
+        String className =
+            testClass.getName().substring(testClass.getName().lastIndexOf(".") +
+                                          1);
         log4j.debug("className=" + className);
         setTestClass(className);
         log4j.exit();
@@ -747,11 +841,14 @@ public class UITestDriver {
      */
     public void resetDriverTimeout() {
         log4j.entry();
-        driver.manage().timeouts().implicitlyWait(STD_DRIVER_TIMEOUT, TimeUnit.SECONDS);
+        driver.manage().timeouts().implicitlyWait(STD_DRIVER_TIMEOUT,
+                                                  TimeUnit.SECONDS);
         log4j.debug("ImplicityWait reset to {} Seconds", STD_DRIVER_TIMEOUT);
-        driver.manage().timeouts().pageLoadTimeout(STD_DRIVER_TIMEOUT, TimeUnit.SECONDS);
+        driver.manage().timeouts().pageLoadTimeout(STD_DRIVER_TIMEOUT,
+                                                   TimeUnit.SECONDS);
         log4j.debug("pageLoadTimeout reset to {} Seconds", STD_DRIVER_TIMEOUT);
-        driver.manage().timeouts().setScriptTimeout(STD_DRIVER_TIMEOUT, TimeUnit.SECONDS);
+        driver.manage().timeouts().setScriptTimeout(STD_DRIVER_TIMEOUT,
+                                                    TimeUnit.SECONDS);
         log4j.debug("ScriptTimeout reset to {} Seconds", STD_DRIVER_TIMEOUT);
         setTimeoutAjax(STD_DRIVER_TIMEOUT);
         log4j.debug("timeoutAjax reset to {} Seconds", STD_DRIVER_TIMEOUT);
@@ -764,6 +861,7 @@ public class UITestDriver {
      */
     public void clickById(final String itemId) {
         log4j.entry(itemId);
+        waitForAjaxCalls();
         By element = By.id(itemId);
         clickBy(element);
         log4j.exit();
@@ -777,7 +875,6 @@ public class UITestDriver {
     private String getTextBy(final By by) {
         log4j.entry(new Object[] { by });
         final WebElement webElement = findElement(by);
-        waitForVisible(webElement);
         return log4j.exit(webElement.getText());
     }
 
@@ -788,6 +885,7 @@ public class UITestDriver {
      */
     public String getTextById(final String itemId) {
         log4j.entry(itemId);
+        waitForAjaxCalls();
         final By element = By.id(itemId);
         return log4j.exit(getTextBy(element));
     }
@@ -800,7 +898,6 @@ public class UITestDriver {
     private String getAttributValueBy(final By by) {
         log4j.entry(new Object[] { by });
         final WebElement webElement = findElement(by);
-        waitForVisible(webElement);
         return log4j.exit(webElement.getAttribute("value"));
     }
 
@@ -811,9 +908,29 @@ public class UITestDriver {
      */
     public String getAttributValueById(final String itemId) {
         log4j.entry(itemId);
+        waitForAjaxCalls();
         final By by = By.id(itemId);
         return log4j.exit(getAttributValueBy(by));
     }
+    
+    
+    /**
+     * Ermittelt den Wert eines Elements.
+     * @param identificatory Teilpfad zum Element
+     * @param attribute Attributname
+     * @return Wert des Attributs
+     */
+    public String getValueByCss(String identificatory, String attribute) {
+        log4j.entry(identificatory);
+        final By by = By.cssSelector(identificatory);
+        WebElement webElement = null;
+        
+        waitForAjaxCalls();        
+        webElement = findElement(by); 
+        
+        return log4j.exit(webElement.getAttribute(attribute));
+    }
+    
 
     /**
      * Linksklick in ein Element.
@@ -822,7 +939,6 @@ public class UITestDriver {
     private void clickBy(final By by) {
         log4j.entry(new Object[] { by });
         final WebElement webElement = findElement(by);
-        waitForVisible(webElement);
         webElement.click();
         log4j.exit();
     }
@@ -833,6 +949,7 @@ public class UITestDriver {
      */
     public void clickByCss(final String css) {
         log4j.entry(css);
+        waitForAjaxCalls();
         By element = By.cssSelector(css);
         clickBy(element);
         log4j.exit();
@@ -844,6 +961,7 @@ public class UITestDriver {
      */
     public void clickByXpath(final String xpath) {
         log4j.entry(xpath);
+        waitForAjaxCalls();
         By element = By.xpath(xpath);
         clickBy(element);
         log4j.exit();
@@ -856,7 +974,20 @@ public class UITestDriver {
      */
     public String getTextByXpath(final String xpath) {
         log4j.entry(xpath);
+        waitForAjaxCalls();
         final By element = By.xpath(xpath);
+        return log4j.exit(getTextBy(element));
+    }
+
+    /**
+     * Ermittelt den Wert eines Elements.
+     * @param cssSelector Element cssSelector
+     * @return Wert des Elements
+     */
+    public String getTextByCssSelector(final String cssSelector) {
+        log4j.entry(cssSelector);
+        waitForAjaxCalls();
+        final By element = By.cssSelector(cssSelector);
         return log4j.exit(getTextBy(element));
     }
 
@@ -868,7 +999,6 @@ public class UITestDriver {
     private void sendKeysBy(final By by, final String value) {
         log4j.entry(new Object[] { by });
         WebElement webElement = findElement(by);
-        waitForVisible(webElement);
         webElement.sendKeys(value);
         log4j.exit();
     }
@@ -880,6 +1010,7 @@ public class UITestDriver {
      */
     public void sendKeysById(final String itemId, final String value) {
         log4j.entry(new Object[] { itemId, value });
+        waitForAjaxCalls();
         By element = By.id(itemId);
         sendKeysBy(element, value);
         log4j.exit();
@@ -892,7 +1023,21 @@ public class UITestDriver {
      */
     public void sendKeysByXpath(final String xpath, final String value) {
         log4j.entry(new Object[] { xpath, value });
+        waitForAjaxCalls();
         By element = By.xpath(xpath);
+        sendKeysBy(element, value);
+        log4j.exit();
+    }
+
+    /**
+     * Setzt den Wert eines Elements anhand des CSS-Pfads.
+     * @param css Element CSS Pfad
+     * @param value Wert des Elements
+     */
+    public void sendKeysByCss(final String css, final String value) {
+        log4j.entry(new Object[] { css, value });
+        waitForAjaxCalls();
+        By element = By.cssSelector(css);
         sendKeysBy(element, value);
         log4j.exit();
     }
@@ -904,9 +1049,25 @@ public class UITestDriver {
      */
     public void sendKeysById(final String itemId, final Keys keys) {
         log4j.entry(new Object[] { itemId, keys });
+        waitForAjaxCalls();
         By element = By.id(itemId);
         WebElement webElement = driver.findElement(element);
-        waitForVisible(webElement);
+        Actions actions = new Actions(driver);
+        actions.sendKeys(webElement, keys);
+        Action action = actions.build();
+        action.perform();
+    }
+
+    /**
+     * Ausführen einer Tastenkombination auf einem Element anhand des CSS-Pfads.
+     * @param css Element CSS Pfad
+     * @param keys Tastenkombination
+     */
+    public void sendKeysByCss(final String css, final Keys keys) {
+        log4j.entry(new Object[] { css, keys });
+        waitForAjaxCalls();
+        By element = By.cssSelector(css);
+        WebElement webElement = driver.findElement(element);
         Actions actions = new Actions(driver);
         actions.sendKeys(webElement, keys);
         Action action = actions.build();
@@ -921,8 +1082,12 @@ public class UITestDriver {
     private void clearAndSendKeysBy(final By by, final String value) {
         log4j.entry(new Object[] { by });
         WebElement webElement = findElement(by);
-        waitForVisible(webElement);
+        webElement.click();
+        waitForAjaxCalls();
+        webElement = findElement(by);
         webElement.clear();
+        waitForAjaxCalls();
+        webElement = findElement(by);
         webElement.sendKeys(value);
         log4j.exit();
     }
@@ -934,7 +1099,36 @@ public class UITestDriver {
      */
     public void clearAndSendKeysById(final String itemId, final String value) {
         log4j.entry(new Object[] { itemId, value });
+        waitForAjaxCalls();
         By element = By.id(itemId);
+        clearAndSendKeysBy(element, value);
+        log4j.exit();
+    }
+    
+    
+    /**
+     * Leeren und setzen des Werts eines Elements.
+     * @param itemId Element ID
+     * @param value Wert des Elements
+     */
+    public void clearAndSendKeysByCss(final String itemId, final String value) {
+        log4j.entry(new Object[] { itemId, value });
+        waitForAjaxCalls();
+        By element = By.cssSelector(itemId);
+        clearAndSendKeysBy(element, value);
+        log4j.exit();
+    }
+    
+
+    /**
+     * Leeren und setzen des Werts eines Elements.
+     * @param xpath Element XPATH
+     * @param value Wert des Elements
+     */
+    public void clearAndSendKeysByXpath(final String xpath, final String value) {
+        log4j.entry(new Object[] { xpath, value });
+        waitForAjaxCalls();
+        By element = By.xpath(xpath);
         clearAndSendKeysBy(element, value);
         log4j.exit();
     }
@@ -944,11 +1138,27 @@ public class UITestDriver {
      * @param itemId Element ID
      * @param value Wert des Elements
      */
-    public void selectValueFromLovById(final String itemId, final String value) {
+    public void selectValueFromLovById(final String itemId,
+                                       final String value) {
 
         log4j.entry(new Object[] { itemId, value });
+        waitForAjaxCalls();
         final WebElement element = findElement(By.id(itemId));
-        waitForVisible(element);
+        new Select(element).selectByVisibleText(value);
+        log4j.exit();
+    }
+
+    /**
+     * Auswählen eines Wertes aus einer Lov eines Elements.
+     * @param itemCss Element CSS-Pfad
+     * @param value Wert des Elements
+     */
+    public void selectValueFromLovByCss(final String itemCss,
+                                        final String value) {
+
+        log4j.entry(new Object[] { itemCss, value });
+        waitForAjaxCalls();
+        final WebElement element = findElement(By.cssSelector(itemCss));
         new Select(element).selectByVisibleText(value);
         log4j.exit();
     }
@@ -991,6 +1201,7 @@ public class UITestDriver {
      * @return Select-Element im Dokument
      */
     public Select findLovById(final String id) {
+        waitForAjaxCalls();
         return new Select(findElement(By.id(id)));
     }
 
@@ -999,9 +1210,8 @@ public class UITestDriver {
      * @param by Element
      * @return Wert
      */
-    public String getSelectedItemInLovBy(final By by) {
+    private String getSelectedItemInLovBy(final By by) {
         final WebElement element = findElement(by);
-        waitForVisible(element);
         return new Select(element).getFirstSelectedOption().getText();
     }
 
@@ -1011,6 +1221,7 @@ public class UITestDriver {
      * @return Wert
      */
     public String getSelectedItemInLovById(final String id) {
+        waitForAjaxCalls();
         final By by = By.id(id);
         return getSelectedItemInLovBy(by);
     }
@@ -1019,4 +1230,22 @@ public class UITestDriver {
         UITestDriver.timeoutAjax = timeoutAjax;
     }
 
+    public void setXPathStatusIndicatorImage(String xPathStatusIndicatorImage) {
+        this.xPathStatusIndicatorImage = xPathStatusIndicatorImage;
+    }
+
+    public String getXPathStatusIndicatorImage() {
+        return xPathStatusIndicatorImage;
+    }
+    
+    public void setImplicitlyWaitTimeout(int seconds){
+        driver.manage().timeouts().implicitlyWait(seconds,
+                                                  TimeUnit.SECONDS);
+    }
+    
+    public void resetImplicitlyWaitTimeout(){
+        driver.manage().timeouts().implicitlyWait(STD_DRIVER_TIMEOUT,
+                                                  TimeUnit.SECONDS);
+    }
+    
 }

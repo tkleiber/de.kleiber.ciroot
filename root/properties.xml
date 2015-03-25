@@ -18,12 +18,12 @@
     </condition>
     <property name="oracle.jdeveloper.ant.library"
               location="${jdeveloper.home}/jdeveloper/jdev/lib/ant-jdeveloper.jar"/>
-    <condition property="oracle.ojdeploy.executable" value="ojdeploy.exe" else="ojdeploy">
+    <condition property="oracle.ojdeploy.executable" value="ojdeploy64.exe" else="ojdeploy">
         <os family="windows"/>
     </condition>
     <property name="oracle.jdeveloper.ojdeploy.path"
               location="${jdeveloper.home}/jdeveloper/jdev/bin/${oracle.ojdeploy.executable}"/>
-    <condition property="oracle.ojserver.executable" value="ojserver.exe" else="ojserver">
+    <condition property="oracle.ojserver.executable" value="ojserver64.exe" else="ojserver">
         <os family="windows"/>
     </condition>
     <condition property="oracle.wlst.executable" value="wlst.cmd" else="wlst.sh">

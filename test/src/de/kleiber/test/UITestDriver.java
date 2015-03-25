@@ -85,7 +85,7 @@ public class UITestDriver {
 
     /** URL des Selenium Grid Hub Server. */
     private static final String SELENIUM_GRID =
-        "http://ikb-selenium.ikb.de:4444/wd/hub";
+        "http://localhost:4444/wd/hub";
 
     /** Standard-Timeout, nach dem Selenium-Aktionen abgebrochen werden. */
     public static final int STD_DRIVER_TIMEOUT = 30;
